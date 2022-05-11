@@ -40,7 +40,10 @@ AFightingGameCharacter::AFightingGameCharacter()
 	wasMediumAttackUsed = false;
 	wasHeavyAttackUsed = false;
 	wasSpecialAttackUsed = false;
+	wasExAttackUsed = false;
+	wasSuperAttackUsed = false;
 	hasLandedHit = false;
+	superMeterAmount = 1.0f;
 	Hurtbox = nullptr;
 	otherPlayer = nullptr;
 	isFlipped = false;
@@ -52,6 +55,7 @@ AFightingGameCharacter::AFightingGameCharacter()
 	gravityScale = GetCharacterMovement()->GravityScale;
 	stunTime = 0.0f;
 	canMove = true;
+	inputDecayTime = 5.0f;
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -82,6 +86,7 @@ void AFightingGameCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 			//PlayerInputComponent->BindAction("HeavyAttack", IE_Released, this, &AFightingGameCharacter::StartHeavyAttack);
 			PlayerInputComponent->BindAction("SpecialAttack", IE_Pressed, this, &AFightingGameCharacter::StartSpecialAttack);
 			//PlayerInputComponent->BindAction("SpecialAttack", IE_Released, this, &AFightingGameCharacter::StartSpecialAttack);
+			PlayerInputComponent->BindAction("ExAttack", IE_Pressed, this, &AFightingGameCharacter::StartExAttack);
 			PlayerInputComponent->BindAxis("Move Right", this, &AFightingGameCharacter::MoveRight);
 		}
 		else
@@ -96,7 +101,7 @@ void AFightingGameCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 			PlayerInputComponent->BindAction("P2MediumAttack", IE_Pressed, this, &AFightingGameCharacter::StartMediumAttack);
 			PlayerInputComponent->BindAction("P2HeavyAttack", IE_Pressed, this, &AFightingGameCharacter::StartHeavyAttack);
 			PlayerInputComponent->BindAction("P2SpecialAttack", IE_Pressed, this, &AFightingGameCharacter::StartSpecialAttack);
-
+			PlayerInputComponent->BindAction("P2ExAttack", IE_Pressed, this, &AFightingGameCharacter::StartExAttack);
 			PlayerInputComponent->BindAxis("P2MoveRight", this, &AFightingGameCharacter::P2MoveRight);
 		}
 	}
@@ -153,7 +158,7 @@ void AFightingGameCharacter::FGTakeDamage(float Damage, float _stunTime, float _
 	if (characterState != ECharacterState::VE_Blocking)
 	{	
 		UE_LOG(LogTemp, Warning, TEXT("we are taking %f damage"), Damage);
-
+		superMeterAmount += 0.15f;
 		
 		stunTime = _stunTime;
 		
@@ -175,6 +180,7 @@ void AFightingGameCharacter::FGTakeDamage(float Damage, float _stunTime, float _
 	{
 		float reducedDamage = Damage * 0.1f;
 		playerHealth -= reducedDamage;
+		superMeterAmount += 0.15f;
 		UE_LOG(LogTemp, Warning, TEXT("we are taking %f damage"), reducedDamage);
 
 		stunTime = _blockStunTime;
@@ -192,12 +198,26 @@ void AFightingGameCharacter::FGTakeDamage(float Damage, float _stunTime, float _
 	{
 		otherPlayer->hasLandedHit = true;
 		otherPlayer->PerformPushBack(_pushbackAmount, 0.0f, false);
+		if (otherPlayer->wasExAttackUsed != true)
+		{
+			otherPlayer->superMeterAmount += Damage * 0.2f;
+		}
 	}
 	else
 		UE_LOG(LogTemp, Warning, TEXT("The other player is not valid in this context"));
 	
 	if (playerHealth < 0.0f)
 		playerHealth = 0.0f;
+}
+
+void AFightingGameCharacter::addInputToInputbuffer(FInputInfo _inputInfo)
+{
+	inputBuffer.Add(_inputInfo);
+	//GetWorld()->GetTimerManager().SetTimer(inputBufferHandle, this, &AFightingGameCharacter::removeInputFromBuffer, inputDecayTime, false);
+}
+
+void AFightingGameCharacter::removeInputFromBuffer()
+{
 }
 
 void AFightingGameCharacter::StartLightAttack()
@@ -222,6 +242,22 @@ void AFightingGameCharacter::StartSpecialAttack()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Special Attack Used"));
 	wasSpecialAttackUsed = true;	
+}
+
+void AFightingGameCharacter::StartExAttack()
+{
+	wasSuperAttackUsed = true;
+	//if (superMeterAmount >= 0.5f)
+	//{
+	//	superMeterAmount -= 0.5f;
+	//	wasExAttackUsed = true;
+	//}
+	//else if (superMeterAmount >= 1.0f)
+	//{
+	//	wasSuperAttackUsed = true;
+	//	superMeterAmount -= 1.0f;
+	//}
+
 }
 
 void AFightingGameCharacter::P2StartLightAttack()
@@ -252,6 +288,11 @@ void AFightingGameCharacter::P2Jump()
 void AFightingGameCharacter::P2StopJump()
 {
 	StopJumping();
+}
+
+void AFightingGameCharacter::P2StartExAttack()
+{
+	StartExAttack();
 }
 
 void AFightingGameCharacter::P2MoveRight(float _value)

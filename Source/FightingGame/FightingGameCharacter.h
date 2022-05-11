@@ -19,6 +19,17 @@ enum class ECharacterState : uint8
 	VE_Launched		UMETA(DisplayName = "LAUNCHED")
 };
 
+USTRUCT(BlueprintType)
+struct FInputInfo
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+		FString inputName;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+		float inputTime;
+};
+
 
 
 
@@ -28,11 +39,16 @@ class AFightingGameCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
-	
+		UFUNCTION(BlueprintCallable)
+		void addInputToInputbuffer(FInputInfo _inputInfo);
+	UFUNCTION(BlueprintCallable)
+		void removeInputFromBuffer();
+
 	void StartLightAttack();
 	void StartMediumAttack();
 	void StartHeavyAttack();
 	void StartSpecialAttack();
+	void StartExAttack();
 
 	UFUNCTION(BlueprintCallable)
 		void P2StartLightAttack();
@@ -46,6 +62,8 @@ class AFightingGameCharacter : public ACharacter
 		void P2Jump();
 	UFUNCTION(BlueprintCallable)
 		void P2StopJump();
+	UFUNCTION(BlueprintCallable)
+		void P2StartExAttack();
 	UFUNCTION(BlueprintCallable)
 		void P2MoveRight(float _value);
 
@@ -131,8 +149,21 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
 		bool wasSpecialAttackUsed;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
+		bool wasExAttackUsed;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
+		bool wasSuperAttackUsed;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
+		float superMeterAmount;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
 		bool hasLandedHit;
 
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "InputBuffer")
+		TArray<FInputInfo> inputBuffer;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "InputBuffer")
+		FTimerHandle inputBufferHandle;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "InputBuffer")
+		float inputDecayTime;
 
 protected:
 	// APawn interface

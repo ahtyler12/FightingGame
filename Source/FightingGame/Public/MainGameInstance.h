@@ -14,7 +14,9 @@ enum class ECharacterClass : uint8
 {
 	VE_Default UMETA(DisplayName = "Mannequin"),
 	VE_Mutant  UMETA(DisplayName = "Mutant"),
-	VE_Vampire UMETA(DisplayName = "Vampire")
+	VE_Vampire UMETA(DisplayName = "Vampire"),
+	VE_Paladin UMETA(DisplayName = "Paladin"),
+	VE_Erika   UMETA(DisplayName = "Erika")
 };
 
 UCLASS()
