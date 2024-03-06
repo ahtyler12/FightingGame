@@ -8,6 +8,7 @@ public class FightingGame : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "HeadMountedDisplay" });
-	}
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "OnlineSubsystem", "OnlineSubsystemUtils",  "ApplicationCore", "Networking" });
+        PrivateDependencyModuleNames.AddRange(new string[] { "GGPOUE4" });
+    }
 }
