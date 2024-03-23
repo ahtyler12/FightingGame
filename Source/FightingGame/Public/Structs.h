@@ -36,6 +36,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
 	ECharacterState resulatingState;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	EComboType comboType;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
 	float meterCost = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
 	int64 maxInputWindow = 12;

@@ -88,10 +88,10 @@ AFightingGameCharacter::AFightingGameCharacter()
 	
 	
 	hitStunDecayModifier = 2.0f;
-	damageDecayModifier = 2.0f;
+	damageDecayModifier = 1.5f;
 	comboCounter = 0;
 
-	//currentMove = nullptr;
+	
 
 	currentTick = 0;
 	currentFrameInputIndex = 0;
@@ -126,7 +126,7 @@ void AFightingGameCharacter::Tick(float DeltaTime)
 		if (isStuckInEnemy)
 		{
 			float distanceApart = fabs(GetActorLocation().X - otherPlayer->GetActorLocation().X);
-			float distanceToMove = (95.0f - distanceApart) * .5f;
+			float distanceToMove = (145.0f - distanceApart) * .5f;
 
 			if (otherPlayer->isFacingRight)
 			{
@@ -202,6 +202,9 @@ void AFightingGameCharacter::Tick(float DeltaTime)
 		DetermineCommandToUse();
 
 		if (characterState != ECharacterState::E_NeutralJump
+			&& characterState != ECharacterState::E_ForwardJump
+			&& characterState != ECharacterState::E_BackwardJump
+			&& characterState != ECharacterState::E_WallJump
 			&& comboState != EComboState::E_GroundBounce
 			&& comboState != EComboState::E_WallBounce
 			&& canFlip)
@@ -220,8 +223,7 @@ void AFightingGameCharacter::Tick(float DeltaTime)
 								{
 									transform = mesh->GetRelativeTransform();
 									scale = transform.GetScale3D();
-									scale.Y = 1;
-									scale.X = 1;
+									scale.Y = 1;									
 									transform.SetScale3D(scale);
 									mesh->SetRelativeTransform(transform);
 
@@ -237,7 +239,6 @@ void AFightingGameCharacter::Tick(float DeltaTime)
 								{
 									transform = mesh->GetRelativeTransform();
 									scale = transform.GetScale3D();
-									scale.X = -1;
 									scale.Y = -1;
 									transform.SetScale3D(scale);
 									mesh->SetRelativeTransform(transform);
@@ -258,6 +259,7 @@ void AFightingGameCharacter::Tick(float DeltaTime)
 		}
 	}
 }
+
 void AFightingGameCharacter::MoveRight(float Value)
 {	
 	if (this)
@@ -399,8 +401,7 @@ void AFightingGameCharacter::MoveRight(float Value)
                         && characterState != ECharacterState::E_Blocking
                         && characterState != ECharacterState::E_NeutralJump
                         && comboState == EComboState::E_None)
-                    {
-                         float currentDistanceApart = abs(otherPlayer->GetActorLocation().X - GetActorLocation().X);
+                    {                        
                          if (Value > 0.01f)
                          { 
 						   hasReleasedRightAxisInput = false;
@@ -440,6 +441,7 @@ void AFightingGameCharacter::MoveRight(float Value)
                           isPressingBack = false;
 						 }
 						 AddMovementInput(FVector(1.0f, 0.0f, 0.0f), Value);
+						
                     }
 
                      else if (canMove && characterState == ECharacterState::E_Crouching)
@@ -461,6 +463,25 @@ void AFightingGameCharacter::MoveRight(float Value)
 
                         }
                      }
+
+					 else if (canMove && characterState == ECharacterState::E_NeutralJump	|| characterState == ECharacterState::E_ForwardJump || characterState == ECharacterState::E_BackwardJump|| characterState == ECharacterState::E_WallJump)
+					{
+						if (Value > 0.01f)
+						{
+							if (!isFacingRight)
+							{
+								isPressingBack = true;
+							}
+
+						}
+						else if (Value < -0.01f)
+						{
+							if (isFacingRight)
+							{
+								isPressingBack = true;
+							}
+						 }
+					}
                 }				
 			}
 		}
@@ -668,7 +689,10 @@ void AFightingGameCharacter::MoveRightPad(float Value)
 					else
 						isPressingBack = false;
 				}
-				else if (canMove && characterState == ECharacterState::E_NeutralJump)
+				else if (canMove && characterState == ECharacterState::E_NeutralJump
+					|| characterState == ECharacterState::E_ForwardJump
+					|| characterState == ECharacterState::E_BackwardJump
+					|| characterState == ECharacterState::E_WallJump)
 				{
 					if (Value > 0.01f)
 					{
@@ -692,11 +716,11 @@ void AFightingGameCharacter::MoveRightPad(float Value)
 		}
 	}
 }
+
 void AFightingGameCharacter::BeginStun()
 {
 	if(stunFrames > 0)
-	{
-		//UE_LOG(LogTemp, Warning, TEXT("Stunned for: %d frames!"), stunFrames);
+	{		
 		canMove = false;
 		canAttack = false;
 	}
@@ -728,8 +752,8 @@ void AFightingGameCharacter::BeginHitStop(int _hitStopFrames)
 {
 	if (_hitStopFrames > 0)
 	{
-		float hitstopModifier = stunFrames / hitstopFrames;
-		UE_LOG(LogTemp, Warning, TEXT("Begining Hitstop for %d frames!"), _hitStopFrames);
+		float hitstopModifier = stunFrames / _hitStopFrames;
+		
 		if (hitstopModifier > 0.0f)
 		{
 			if (auto gamemode = Cast<AFightingGameGameMode>(GetWorld()->GetAuthGameMode()))
@@ -776,6 +800,12 @@ void AFightingGameCharacter::FGTakeDamage(float Damage, int _stunFrames, int _bl
 		
 		if (characterState != ECharacterState::E_Blocking && characterState != ECharacterState::E_CrouchBlocking)
 		{			
+			if (stunFrames > 0 || otherPlayer->comboCounter == 0) {
+				otherPlayer->comboCounter++;
+				otherPlayer->BeginCombo();
+				otherPlayer->DetermineComboRating();
+			}
+
 			if (!_shouldIgnoreDamageDecay && otherPlayer) {
 				float decayedDamage = Damage - (otherPlayer->comboCounter * damageDecayModifier) * .01f;
 				if (decayedDamage < .01f) {
@@ -785,11 +815,13 @@ void AFightingGameCharacter::FGTakeDamage(float Damage, int _stunFrames, int _bl
 				takenDamageThisFrame = true;
 				damageDecayModifier += .25f;
 				takenDamageThisFrame = true;
-				//Add reference to last damage received
+				lastDamageReceived = decayedDamage;
 			}
-			else {
-				playerHealth -= Damage;
-				//Add reference to last damage received
+			else 
+			{
+				lastDamageReceived = Damage * damageDecayModifier;
+				playerHealth -= lastDamageReceived;
+				
 			}
 			
 
@@ -800,17 +832,12 @@ void AFightingGameCharacter::FGTakeDamage(float Damage, int _stunFrames, int _bl
 			if (stunFrames > 0 && !_shouldIgnoreDamageDecay && otherPlayer) {
 				
 				stunFrames = _stunFrames - otherPlayer->comboCounter * hitStunDecayModifier;				
-				hitStunDecayModifier += 0.5f;
+				hitStunDecayModifier += 0.5f;				
 			}
 			else {
 				stunFrames = _stunFrames;				
 			}
 
-			if (stunFrames > 0 || otherPlayer->comboCounter == 0) {
-				otherPlayer->comboCounter++;
-				otherPlayer->BeginCombo();
-				otherPlayer->DetermineComboRating();
-			}
 			if (characterState == ECharacterState::E_Default)
 			{
 				comboState = EComboState::E_StandingStun;
@@ -991,152 +1018,79 @@ void AFightingGameCharacter::CheckInputBufferForCommand(EInputState _inputState)
 {
 	int correctSequenceCounter = 0;
 	
-	if (!useDA) 
-	{
-		for (int currentCommand = 0; currentCommand < commandList.Num(); ++currentCommand)
-		{
-			if (superMeterAmount >= commandList[currentCommand].meterCost)
-			{
-				correctSequenceCounter = commandList[currentCommand].inputTypes.Num() - 1;
+    
+        for (int currentCommand = 0; currentCommand < commandList.Num(); ++currentCommand)
+        {
+            if (superMeterAmount >= commandList[currentCommand].meterCost)
+            {
+                correctSequenceCounter = commandList[currentCommand].inputTypes.Num() - 1;
 
-				for (int frame = 0; frame < commandList[currentCommand].maxInputWindow; ++frame)
-				{
-					int frameDataToCheck = (currentTick - frame + inputBuffer.Capacity()) % inputBuffer.Capacity();
-					for (int i = 0; i < maxInputsPerFrame; ++i)
-					{
-						if (inputBuffer[frameDataToCheck].inputs[i].inputType != EInputType::E_None)
-						{
-							EInputType currentInputType = inputBuffer[frameDataToCheck].inputs[i].inputType;
-							EInputState currentInputState = inputBuffer[frameDataToCheck].inputs[i].inputState;
-							int64 chargedFrames = inputBuffer[frameDataToCheck].inputs[i].chargeFrame;
+                for (int frame = 0; frame < commandList[currentCommand].maxInputWindow; ++frame)
+                {
+                    int frameDataToCheck = (currentTick - frame + inputBuffer.Capacity()) % inputBuffer.Capacity();
+                    for (int i = 0; i < maxInputsPerFrame; ++i)
+                    {
+                        if (inputBuffer[frameDataToCheck].inputs[i].inputType != EInputType::E_None)
+                        {
+                            EInputType currentInputType = inputBuffer[frameDataToCheck].inputs[i].inputType;
+                            EInputState currentInputState = inputBuffer[frameDataToCheck].inputs[i].inputState;
+                            int64 chargedFrames = inputBuffer[frameDataToCheck].inputs[i].chargeFrame;
 
-							if (chargedFrames > 0)
-							{
-								chargedFrames = chargedFrames - 1;
-							}
-							if (currentInputType == commandList[currentCommand].inputTypes[commandList[currentCommand].inputTypes.Num() - 1].inputType
-								&& _inputState == EInputState::E_Released && commandList[currentCommand].isCharging)
-							{
-								commandList[currentCommand].isCharging = false;
-								commandList[currentCommand].currentFramesHeld = 0;
-							}
-
-
-							if (correctSequenceCounter > -1)
-							{
-								if ((IsInputMultiInputCommand(commandList[currentCommand], currentInputType) && currentInputState != EInputState::E_Released || currentInputType == commandList[currentCommand].inputTypes[correctSequenceCounter].inputType)
-									&& (currentInputState == commandList[currentCommand].inputTypes[correctSequenceCounter].inputState || currentInputState == EInputState::E_Pressed && commandList[currentCommand].inputTypes[correctSequenceCounter].inputState == EInputState::E_Held)
-									&& chargedFrames >= commandList[currentCommand].inputTypes[correctSequenceCounter].requiredChargeFrames /*End of IF*/)
-								{
-									--correctSequenceCounter;
-								}
-								else if (currentInputType != EInputType::E_None && currentInputState != EInputState::E_Released)
-								{
-									correctSequenceCounter = commandList[currentCommand].inputTypes.Num() - 1;
-								}
-								else if (IsInputMultiInputCommand(commandList[currentCommand], currentInputType) && currentInputState == EInputState::E_Released)
-								{
-									correctSequenceCounter = commandList[currentCommand].inputTypes.Num() - 1;
-									for (int j = 0; j < commandList[currentCommand].inputTypes.Num(); ++j)
-									{
-										if (commandList[currentCommand].inputTypes[j].inputType == currentInputType)
-										{
-											commandList[currentCommand].inputTypes[j].isCurrentlyHeld = false;
-										}
-									}
-								}
-							}
-							if (correctSequenceCounter == -1 && _inputState != EInputState::E_Released && characterState == commandList[currentCommand].requiredState)
-							{
-								moveBuffer.Add(commandList[currentCommand]);
-								break;
-							}
-
-						}
-						else
-						{
-							break;
-						}
-
-					}
-				}
-			}
-
-		}
-	}
-	else
-	{
-		for (int currentCommand = 0; currentCommand < lastCommand->Branches.Num(); ++currentCommand)
-		{
-			if (superMeterAmount >= lastCommand->GetMeterCost())
-			{
-				correctSequenceCounter =  lastCommand->commandData.inputTypes.Num() - 1;
-
-				for (int frame = 0; frame < lastCommand->Branches[currentCommand]->commandData.maxInputWindow; ++frame)
-				{
-					int frameDataToCheck = (currentTick - frame + inputBuffer.Capacity()) % inputBuffer.Capacity();
-					for (int i = 0; i < maxInputsPerFrame; ++i)
-					{
-						if (inputBuffer[frameDataToCheck].inputs[i].inputType != EInputType::E_None)
-						{
-							EInputType currentInputType = inputBuffer[frameDataToCheck].inputs[i].inputType;
-							EInputState currentInputState = inputBuffer[frameDataToCheck].inputs[i].inputState;
-							int64 chargedFrames = inputBuffer[frameDataToCheck].inputs[i].chargeFrame;
-
-							if (chargedFrames > 0)
-							{
-								chargedFrames = chargedFrames - 1;
-							}
-							if (currentInputType == lastCommand->Branches[currentCommand]->commandData.inputTypes[lastCommand->Branches[currentCommand]->commandData.inputTypes.Num() - 1].inputType
-								&& _inputState == EInputState::E_Released && lastCommand->Branches[currentCommand]->commandData.isCharging)
-							{
-								lastCommand->Branches[currentCommand]->commandData.isCharging = false;
-								lastCommand->Branches[currentCommand]->commandData.currentFramesHeld = 0;
-							}
+                            if (chargedFrames > 0)
+                            {
+                                chargedFrames = chargedFrames - 1;
+                            }
+                            if (currentInputType == commandList[currentCommand].inputTypes[commandList[currentCommand].inputTypes.Num() - 1].inputType
+                                && _inputState == EInputState::E_Released && commandList[currentCommand].isCharging)
+                            {
+                                commandList[currentCommand].isCharging = false;
+                                commandList[currentCommand].currentFramesHeld = 0;
+                            }
 
 
-							if (correctSequenceCounter > -1)
-							{
-								if ((IsInputMultiInputCommand(commandList[currentCommand], currentInputType) && currentInputState != EInputState::E_Released || currentInputType == commandList[currentCommand].inputTypes[correctSequenceCounter].inputType)
-									&& (currentInputState == commandList[currentCommand].inputTypes[correctSequenceCounter].inputState || currentInputState == EInputState::E_Pressed && commandList[currentCommand].inputTypes[correctSequenceCounter].inputState == EInputState::E_Held)
-									&& chargedFrames >= commandList[currentCommand].inputTypes[correctSequenceCounter].requiredChargeFrames /*End of IF*/)
-								{
-									--correctSequenceCounter;
-								}
-								else if (currentInputType != EInputType::E_None && currentInputState != EInputState::E_Released)
-								{
-									correctSequenceCounter = commandList[currentCommand].inputTypes.Num() - 1;
-								}
-								else if (IsInputMultiInputCommand(commandList[currentCommand], currentInputType) && currentInputState == EInputState::E_Released)
-								{
-									correctSequenceCounter = commandList[currentCommand].inputTypes.Num() - 1;
-									for (int j = 0; j < commandList[currentCommand].inputTypes.Num(); ++j)
-									{
-										if (commandList[currentCommand].inputTypes[j].inputType == currentInputType)
-										{
-											commandList[currentCommand].inputTypes[j].isCurrentlyHeld = false;
-										}
-									}
-								}
-							}
-							if (correctSequenceCounter == -1 && _inputState != EInputState::E_Released && characterState == commandList[currentCommand].requiredState)
-							{
-								moveBuffer.Add(lastCommand->Branches[currentCommand]->commandData);
-								break;
-							}
+                            if (correctSequenceCounter > -1)
+                            {
+                                if ((IsInputMultiInputCommand(commandList[currentCommand], currentInputType) && currentInputState != EInputState::E_Released || currentInputType == commandList[currentCommand].inputTypes[correctSequenceCounter].inputType)
+                                    && (currentInputState == commandList[currentCommand].inputTypes[correctSequenceCounter].inputState || currentInputState == EInputState::E_Pressed && commandList[currentCommand].inputTypes[correctSequenceCounter].inputState == EInputState::E_Held)
+                                    && chargedFrames >= commandList[currentCommand].inputTypes[correctSequenceCounter].requiredChargeFrames /*End of IF*/)
+                                {
+                                    --correctSequenceCounter;
+                                }
+                                else if (currentInputType != EInputType::E_None && currentInputState != EInputState::E_Released)
+                                {
+                                    correctSequenceCounter = commandList[currentCommand].inputTypes.Num() - 1;
+                                }
+                                else if (IsInputMultiInputCommand(commandList[currentCommand], currentInputType) && currentInputState == EInputState::E_Released)
+                                {
+                                    correctSequenceCounter = commandList[currentCommand].inputTypes.Num() - 1;
+                                    for (int j = 0; j < commandList[currentCommand].inputTypes.Num(); ++j)
+                                    {
+                                        if (commandList[currentCommand].inputTypes[j].inputType == currentInputType)
+                                        {
+                                            commandList[currentCommand].inputTypes[j].isCurrentlyHeld = false;
+                                        }
+                                    }
+                                }
+                            }
+                            if (correctSequenceCounter == -1 && _inputState != EInputState::E_Released && characterState == commandList[currentCommand].requiredState)
+                            {
+                                moveBuffer.Add(commandList[currentCommand]);
+                                break;
+                            }
 
-						}
-						else
-						{
-							break;
-						}
+                        }
+                        else
+                        {
+                            break;
+                        }
 
-					}
-				}
-			}
+                    }
+                }
+            }
 
-		}
-	}
+        }
+	
+	
 
 }
 
@@ -1223,8 +1177,7 @@ void AFightingGameCharacter::StartCommand(FString _commandName)
 						commandList[currentCommand].isCharging = true;
 					}
 					lastCommandUsed = commandList[currentCommand];
-					commandList[currentCommand].hasUsedCommand = true;
-					//UE_LOG(LogTemp, Warning, TEXT("Using Command: %s"), *commandList[currentCommand].name);
+					commandList[currentCommand].hasUsedCommand = true;					
 					if (commandList[currentCommand].resulatingState != ECharacterState::E_Default)
 					{
 						characterState = commandList[currentCommand].resulatingState;
@@ -1317,18 +1270,20 @@ void AFightingGameCharacter::Jump()
 		&& characterState != ECharacterState::E_Crouching
 		&& jumpCount < maxJumpCount)
 	{
-		IgnoreCollision(true);
+		//IgnoreCollision(true);
 		if (characterState == ECharacterState::E_MovingBack)
 		{
 			if (isFacingRight)
 			{
 				//Launch Player Left and Up
 				CustomLaunchPlayer(FVector(-jumpDistance, 0.0f, jumpHeight), true, true, false);
+				characterState = ECharacterState::E_BackwardJump;
 			}
 			else
 			{
 				//Launch Player Right and Up
 				CustomLaunchPlayer(FVector(jumpDistance, 0.0f, jumpHeight), true, true, false);
+				characterState = ECharacterState::E_ForwardJump;
 			}
 			
 		}
@@ -1338,23 +1293,25 @@ void AFightingGameCharacter::Jump()
 			{
 				//Launch Player Left and Up
 				CustomLaunchPlayer(FVector(-jumpDistance, 0.0f, jumpHeight), true, true, false);
+				characterState = ECharacterState::E_ForwardJump;
 			}
 			else
 			{
 				//Launch Player Right and Up
 				CustomLaunchPlayer(FVector(jumpDistance, 0.0f, jumpHeight), true, true, false);
+				characterState = ECharacterState::E_BackwardJump;
 			}
 		} 
 		else
 		{
 			//Launch Player Up
 			CustomLaunchPlayer(FVector(0.0f, 0.0f, jumpHeight), false, true, false);
-			
+			//Set Character State To Jumping
+			characterState = ECharacterState::E_NeutralJump;
 		}
 		//Increment Jump Count
 		++jumpCount;
-		//Set Character State To Jumping
-		characterState = ECharacterState::E_NeutralJump;
+
 	}
 	else if (comboState == EComboState::E_KnockDown)
 	{
@@ -1370,26 +1327,30 @@ void AFightingGameCharacter::StopJumping()
 void AFightingGameCharacter::Landed(const FHitResult& Hit)
 {
 	GetMovementComponent()->StopMovementImmediately();
-	if (characterState == ECharacterState::E_NeutralJump || characterState == ECharacterState::E_ForwardJump || characterState == ECharacterState::E_BackwardJump)
+	if (characterState == ECharacterState::E_NeutralJump || characterState == ECharacterState::E_ForwardJump || characterState == ECharacterState::E_BackwardJump || characterState == ECharacterState::E_WallJump)
 	{
-		if (otherPlayer && Hit.GetActor() == otherPlayer) {
-			float distanceApart = fabs(GetActorLocation().Y - otherPlayer->GetActorLocation().Y);
+		CheckStuckInOtherCharacter();
+		//if (isStuckInEnemy)
+		//{
+		//	float distanceApart = fabs(GetActorLocation().Y - otherPlayer->GetActorLocation().Y);
 
-			float distanceToMove = 145.0f;
+		//	float distanceToMove = 145.0f;
 
-			if (otherPlayer->isFacingRight) {
-				
-				MoveCharacterSmoothly(GetActorLocation(), FVector(GetActorLocation().X + ((distanceToMove - distanceApart) * 0.5f), GetActorLocation().Y, GetActorLocation().Z - 30.0f));
-				otherPlayer->MoveCharacterSmoothly(otherPlayer->GetActorLocation(), FVector(otherPlayer->GetActorLocation().X + ((distanceToMove - distanceApart) * 0.5f) * -1.0f, otherPlayer->GetActorLocation().Y , otherPlayer->GetActorLocation().Z - 30.0f));
-			}
-			else {
-				MoveCharacterSmoothly(GetActorLocation(), FVector(GetActorLocation().X + ((distanceToMove - distanceApart) * 0.5f), GetActorLocation().Y, GetActorLocation().Z + 30.0f));
-				otherPlayer->MoveCharacterSmoothly(otherPlayer->GetActorLocation(), FVector(otherPlayer->GetActorLocation().X + ((distanceToMove - distanceApart) * 0.5f), otherPlayer->GetActorLocation().Y , otherPlayer->GetActorLocation().Z - 30.0f));
+		//	UE_LOG(LogTemp, Warning, TEXT("Landed on Other Player!!!"));
 
-			}
-			GetCharacterMovement()->GravityScale = gravityScale;
-			gravityscaleModifier = 0.7f;
-		}
+		//	if (otherPlayer->isFacingRight) {
+		//		
+		//		MoveCharacterSmoothly(GetActorLocation(), FVector(GetActorLocation().X + ((distanceToMove - distanceApart) * 0.5f), GetActorLocation().Y, GetActorLocation().Z - 30.0f));
+		//		otherPlayer->MoveCharacterSmoothly(otherPlayer->GetActorLocation(), FVector(otherPlayer->GetActorLocation().X + ((distanceToMove - distanceApart) * 0.5f) * -1.0f, otherPlayer->GetActorLocation().Y , otherPlayer->GetActorLocation().Z - 30.0f));
+		//	}
+		//	else {
+		//		MoveCharacterSmoothly(GetActorLocation(), FVector(GetActorLocation().X + ((distanceToMove - distanceApart) * 0.5f), GetActorLocation().Y, GetActorLocation().Z + 30.0f));
+		//		otherPlayer->MoveCharacterSmoothly(otherPlayer->GetActorLocation(), FVector(otherPlayer->GetActorLocation().X + ((distanceToMove - distanceApart) * 0.5f), otherPlayer->GetActorLocation().Y , otherPlayer->GetActorLocation().Z - 30.0f));
+
+		//	}			
+		//	GetCharacterMovement()->GravityScale = gravityScale;
+		//	gravityscaleModifier = 0.7f;
+		//}
 		if (!Cast<AHitboxActor>(Hit.GetActor()))
 		{
 			GetCharacterMovement()->GravityScale = gravityScale;
@@ -1397,27 +1358,40 @@ void AFightingGameCharacter::Landed(const FHitResult& Hit)
 			characterState = ECharacterState::E_Default;
 			comboState = EComboState::E_None;
 		}
+		jumpCount = 0;
+		IgnoreCollision(false);
+		
 	}
-	else if (comboState == EComboState::E_Launched)// && !shouldGroundBounce || comboState == EComboState::E_WallBounce || comboState == EComboState::E_GroundBounce)
+	else if ((comboState == EComboState::E_Launched && !shouldGroundBounce) || comboState == EComboState::E_WallBounce || comboState == EComboState::E_GroundBounce)
 	{
 		if (!Cast<AHitboxActor>(Hit.GetActor()))
 		{
 			GetCharacterMovement()->GravityScale = gravityScale;
 			gravityscaleModifier = 0.7f;
-			characterState = ECharacterState::E_Default;
-			comboState = EComboState::E_KnockDown;
-		}	
+			if (comboState == EComboState::E_WallBounce || comboState == EComboState::E_GroundBounce)
+			{
+				CheckStuckInOtherCharacter();
+			}
+			if (!shouldHardKnockDown)
+			{
+				comboState = EComboState::E_KnockDown;
+			}
+			else
+			{
+				shouldHardKnockDown = false;
+			}
+		}
 
+		
 		otherPlayer->EndCombo();
+		jumpCount = 0;
+		IgnoreCollision(false);
 	}
 	else if (shouldGroundBounce) {
 		comboState = EComboState::E_GroundBounce;
+		jumpCount = 0;
+		IgnoreCollision(true);
 	}
-
-
-	jumpCount = 0;
-	IgnoreCollision(false);
-
 }
 
 void AFightingGameCharacter::StartCrouching()
@@ -1427,7 +1401,9 @@ void AFightingGameCharacter::StartCrouching()
 
 	if (canMove && comboState != EComboState::E_StandingStun && characterState != ECharacterState::E_NeutralJump
 		&& characterState != ECharacterState::E_ForwardJump && characterState != ECharacterState::E_BackwardJump
-		&& comboState != EComboState::E_Launched && comboState != EComboState::E_Recovery)
+		&& comboState != EComboState::E_Launched && comboState != EComboState::E_Recovery
+		&& comboState != EComboState::E_GroundBounce
+		&& comboState != EComboState::E_WallBounce)
 	{
 		characterState = ECharacterState::E_Crouching;
 		isCrouching = true;
@@ -1441,7 +1417,9 @@ void AFightingGameCharacter::StopCrouching()
 
 	if (comboState != EComboState::E_StandingStun && characterState != ECharacterState::E_NeutralJump
 		&& characterState != ECharacterState::E_ForwardJump && characterState != ECharacterState::E_BackwardJump
-		&& comboState != EComboState::E_Launched && comboState != EComboState::E_Recovery)
+		&& comboState != EComboState::E_Launched && comboState != EComboState::E_Recovery
+		&& comboState != EComboState::E_GroundBounce
+		&& comboState != EComboState::E_WallBounce)
 	{
 		characterState = ECharacterState::E_Default;
 		isCrouching = false;
@@ -1450,8 +1428,7 @@ void AFightingGameCharacter::StopCrouching()
 
 void AFightingGameCharacter::StartBlocking()
 {
-	if (canMove && comboState !=EComboState::E_Launched 
-		&& comboState == EComboState::E_None)
+	if (canMove && comboState == EComboState::E_None)
 	{
 
 		if (isCrouching)
@@ -1502,17 +1479,45 @@ void AFightingGameCharacter::CollidedWithProximityBox(int _blockstunFrames)
 	}
 }
 
+void AFightingGameCharacter::CheckStuckInOtherCharacter()
+{
+	TArray<AActor*> overlappingActors;
+	GetOverlappingActors(overlappingActors, AFightingGameCharacter::StaticClass());
+
+	for (int i = 0; i < overlappingActors.Num(); ++i)
+	{
+		if (auto overlappingCharacter = Cast<AFightingGameCharacter>(overlappingActors[i]))
+		{
+			isStuckInEnemy = true;
+			overlappingCharacter->isStuckInEnemy = true;
+		}
+	}
+}
+
 void AFightingGameCharacter::BeginCombo()
 {
-	//UE_LOG(LogTemp, Warning, TEXT("Combo Started with count: %d"), comboCounter);
+	if (otherPlayer->shouldGroundBounce || otherPlayer->shouldWallBounce)
+	{
+		hasUsedbounce = true;
+	}
+	/*Ends the combo if a combo ender is used or a secondary bounce move was used*/
+	if (lastCommandUsed.comboType == EComboType::E_ComboEnder || hasUsedbounce)
+	{
+		EndCombo();
+	}
+	
+	
+
 }
 
 void AFightingGameCharacter::EndCombo()
 {
 	otherPlayer->hitStunDecayModifier = 2.0f;
-	otherPlayer->damageDecayModifier = 2.0f;
+	otherPlayer->damageDecayModifier = 1.5f;
 	comboCounter = 0;
 	lastComboRating = EComboRating::E_Default;
+	/*Ill advised to do so. Should clear the last command. Currently set it to the standing light attack.*/
+	//lastCommandUsed = commandList[0];
 
 }
 

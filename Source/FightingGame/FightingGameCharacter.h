@@ -40,10 +40,6 @@ public:
 	bool IsHoldingInput;
 };
 
-
-
-
-
 USTRUCT(BlueprintType)
 struct FInputInfo
 {
@@ -66,11 +62,6 @@ struct FInputInfoArray
 public:
 	FInputInfo inputs[maxInputsPerFrame];
 };
-
-
-
-
-
 
 
 UCLASS(config=Game)
@@ -145,6 +136,8 @@ public:
 	//Move a character off the others hurtbox smoothly
 	UFUNCTION(BlueprintImplementableEvent)
 		void MoveCharacterSmoothly(FVector _start, FVector _end);
+	UFUNCTION(BlueprintCallable)
+	void CheckStuckInOtherCharacter();
 	UFUNCTION(BlueprintCallable)
 		void BeginCombo();
 	UFUNCTION(BlueprintCallable)
@@ -238,6 +231,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
 		int lastStunFramesReceived;
+	/*Keeps track of last damage received for practice mode*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
 		float lastDamageReceived;
 
@@ -263,7 +257,7 @@ public:
 	//Number of frames where an Instant Block is considered valid
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
 		const int instantBlockWindow = 8;
-		//Number of frames needed to pass to not get locked out of instant block
+	//Number of frames needed to pass to not get locked out of instant block
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
 		const int framesBetweenInstantBlockAttempt = 10;
 		//Number of frames before another instant block can be performed
@@ -296,7 +290,10 @@ public:
 	float forwardDashDistance;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float backDashDistance;
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	bool isTouchingWall;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	bool shouldHardKnockDown;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
 		bool wasExAttackUsed;
@@ -326,18 +323,19 @@ public:
 		int comboCounter;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combo")
 		EComboRating lastComboRating;
+	/*Could possibly combine in the even of not allowing combos to both ground and wall bounce*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combo")
+		bool hasUsedbounce;
+
+
+
 
 		TCircularBuffer<FInputInfoArray> inputBuffer = TCircularBuffer<FInputInfoArray>(60);
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "InputBuffer")
 		float inputDecayTime;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "InputBuffer")
 		TArray<FCommand> commandList;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "InputBuffer")
-	TArray<UCommandListEntry*> DACommandList;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "InputBuffer")
-	UCommandListEntry* lastCommand;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "InputBuffer")
-	bool useDA;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "InputBuffer")
 		TArray<FCommand> moveBuffer;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "InputBuffer")

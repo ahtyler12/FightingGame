@@ -37,6 +37,7 @@ enum class ECharacterState : uint8
 	E_NeutralJump	UMETA(DisplayName = "NEUTRAL JUMP"),
 	E_ForwardJump	UMETA(DisplayName = "FORWARD JUMP"),
 	E_BackwardJump	UMETA(DisplayName = "BACKWARD JUMP"),
+	E_WallJump		UMETA(DisplayName = "Wall Jump"),
 	E_Blocking		UMETA(DisplayName = "BLOCKING"),
 	E_Crouching		UMETA(DisplayName = "CROUCHING"),
 	E_CrouchBlocking UMETA(DisplayName = "CROUCH BLOCKING")
@@ -86,6 +87,16 @@ enum class EInputState : uint8
 	E_Pressed	 UMETA(DisplayName = "Pressed"),
 	E_Held		 UMETA(DisplayName = "Held"),
 	E_Released	 UMETA(DisplayName = "Released")
+};
+
+/*Used to Determing Functionality during combos.
+  If Attack is of the Combo Ender type then Combos are not allowed
+*/
+UENUM(BlueprintType)
+enum class EComboType : uint8
+{
+	E_ComboStarter,
+	E_ComboEnder
 };
 
 /**

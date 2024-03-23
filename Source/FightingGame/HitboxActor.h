@@ -59,6 +59,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hitbox")
 		bool shouldAttach;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hitbox")
+		bool shouldWallBounce;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hitbox")
+		bool shouldGroundBounce;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hitbox")
 	EHitboxHeight hitboxHeight;
 };
 
