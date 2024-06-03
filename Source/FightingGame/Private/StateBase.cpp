@@ -16,3 +16,8 @@ void UStateBase::OnExitState_Implementation()
 void UStateBase::TickState_Implementation()
 {
 }
+
+bool UStateBase::CheckTransition_Implementation()
+{
+	return false;
+}

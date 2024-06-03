@@ -36,7 +36,7 @@ void UStateManagerComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		currentState->TickState();
 	}
 
-	if (bDebug)
+	if (bDebug && currentState->IsValidLowLevel())
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, this->GetOwner()->GetName() + "'s current state is: " + currentState->stateDisplayName.GetPlainNameString());
 	}
@@ -70,6 +70,10 @@ void UStateManagerComponent::SwitchStateByKey(FString StateKey)
 			}
 			else
 			{
+				//if(NewState->CheckTransition())
+				//{
+				//	
+				//}
 				bCanTickState = false;
 				currentState->OnExitState();
 				if (StateHistory.Num() < stateHistoryLength)
@@ -77,12 +81,12 @@ void UStateManagerComponent::SwitchStateByKey(FString StateKey)
 					StateHistory.Push(currentState);
 				}
 				else
-				{					
+				{
 					StateHistory.RemoveAt(0);
 					StateHistory.Push(currentState);
-					
+
 				}
-				currentState = NewState;				
+				currentState = NewState;
 			}
 		}
 		if (currentState)
