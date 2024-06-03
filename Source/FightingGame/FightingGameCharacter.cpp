@@ -16,6 +16,12 @@
 
 AFightingGameCharacter::AFightingGameCharacter()
 {
+
+	StateManager = CreateDefaultSubobject<UStateManagerComponent>(TEXT("State Manager"));
+	//StateManager->InitStateManager();
+
+
+
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
@@ -38,6 +44,12 @@ AFightingGameCharacter::AFightingGameCharacter()
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 
+	
+	
+
+
+
+
 	maxPlayerHealth = 1.0f;
 	playerHealth = maxPlayerHealth;
 	hasLandedHit = false;
@@ -57,6 +69,7 @@ AFightingGameCharacter::AFightingGameCharacter()
 	MaxDistanceApart = 800.0f;
 	GetCharacterMovement()->GravityScale = 1.3f;
 	gravityScale = GetCharacterMovement()->GravityScale;
+	GetCharacterMovement()->bApplyGravityWhileJumping = false;
 	gravityscaleModifier = 0.7f;
 	stunFrames = 0;
 	hitstopFrames = 1;
@@ -258,6 +271,8 @@ void AFightingGameCharacter::Tick(float DeltaTime)
 
 		}
 	}
+
+
 }
 
 void AFightingGameCharacter::MoveRight(float Value)
@@ -1176,10 +1191,19 @@ void AFightingGameCharacter::StartCommand(FString _commandName)
 					{
 						commandList[currentCommand].isCharging = true;
 					}
-					lastCommandUsed = commandList[currentCommand];
-					commandList[currentCommand].hasUsedCommand = true;					
+					//if(finishTransition &&  ChangeState(commandList[currentCommand].stateID))
+					//{
+					//	
+					//	//commandList[currentCommand].hasUsedCommand = true;
+					//	UE_LOG(LogTemp, Warning, TEXT("Executing Command with state ID: %d"), commandList[currentCommand].stateID);
+					//	break;
+					//}
+					
+
+										
 					if (commandList[currentCommand].resulatingState != ECharacterState::E_Default)
 					{
+						lastCommandUsed = commandList[currentCommand];
 						characterState = commandList[currentCommand].resulatingState;
 					}
 				}

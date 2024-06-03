@@ -29,26 +29,14 @@ public:
 
 	//Required Meter for move to be performed. -1 means there is no meter cost
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flow")
-		float meterCost;
+		float meterCost = -1;
 
 	//In the event that a move does not return to Idle the character will instead return to this move instead
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flow")
 		UCommandListEntry* ReturnMove;
-
-	////Reference to owning Character may not need
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flow")
-	//AFightingGameCharacter* owningChar;
-
-	//Character States that this move can be performed from
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flow")
-		TArray<ECharacterState> acceptableCharacterState;
-
-	////Combo States That this move can be performed from
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flow")
-		TArray<EComboState> acceptableComboState;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flow")
-		UAnimMontage* AnimMontage;
+	bool LoopAnim;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
 		FCommand commandData;
@@ -70,11 +58,12 @@ public:
 		int commandPriority;
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 		float GetMeterCost();
-	UFUNCTION(BlueprintImplementableEvent)
+	//Returns True if Character is in proper state to Execute Command
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		bool CheckState(ECharacterState _currentState, EComboState _comboState);
-	UFUNCTION(BlueprintImplementableEvent)
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void StartCommand();
-	UFUNCTION(BlueprintImplementableEvent)
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void EndCommand();
 	UFUNCTION(BlueprintCallable)
 		void ResetVariables();

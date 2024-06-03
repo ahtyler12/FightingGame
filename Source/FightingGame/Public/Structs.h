@@ -53,6 +53,8 @@ public:
 	bool hasUsedCommand;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
 	bool hasAutoCombo;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
+	int stateID;
 };
 
 
