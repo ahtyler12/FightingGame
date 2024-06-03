@@ -6,13 +6,18 @@
 #include "Engine/DataAsset.h"
 #include "Enums.h"
 #include "Structs.h"
+#include "Public/State.h"
 #include "CommandListEntry.h"
 #include "Public/MainGameInstance.h"
 #include "Containers/CircularBuffer.h"
 #include "GameFramework/Character.h"
 #include "Public/MainGameInstance.h"
+#include "StateManagerComponent.h"
 #include "FightingGameCharacter.generated.h"
 
+
+class UStateManagerComponent;
+DECLARE_MULTICAST_DELEGATE_OneParam(FIntroFinished, AFightingGameCharacter*);
 USTRUCT(BlueprintType)
 struct FDefaultHurtboxDetails
 {
@@ -68,8 +73,13 @@ UCLASS(config=Game)
 class AFightingGameCharacter : public ACharacter
 {
 	GENERATED_BODY()
+
+
 public:
 	AFightingGameCharacter();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "State")
+	UStateManagerComponent* StateManager;
 
 	UFUNCTION(BlueprintImplementableEvent)
 		void PlayDamageSoundEffect();
@@ -172,6 +182,8 @@ public:
 		void SetSuperMeter(float _meter);
 	UFUNCTION(BlueprintCallable)
 		float GetMaxSuperMeter();
+
+
 	/*
 		###############################################################################################################################
 		###############################################################################################################################
@@ -254,16 +266,26 @@ public:
 	bool shouldGroundBounce;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
 	bool shouldWallBounce;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
+	bool counterHit = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Manager")
+	TArray<UState*> States;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Manager")
+	UState* currentState;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Manager")
+	bool finishTransition = true;
+
+
 	//Number of frames where an Instant Block is considered valid
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
 		const int instantBlockWindow = 8;
 	//Number of frames needed to pass to not get locked out of instant block
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
-		const int framesBetweenInstantBlockAttempt = 10;
-		//Number of frames before another instant block can be performed
+	const int framesBetweenInstantBlockAttempt = 10;
+	//Number of frames before another instant block can be performed
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
-		int numFramesUntilInstantBlockAttempt;
-		//The frame to start checking for an Instant Block. -1 indicates no opportunity for instant block
+	int numFramesUntilInstantBlockAttempt;
+	//The frame to start checking for an Instant Block. -1 indicates no opportunity for instant block
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
 		int startInstantBlockFrame;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
@@ -364,6 +386,7 @@ public:
 		bool wonMatch;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Match Flow")
 		bool isPressingBack;
+	
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
