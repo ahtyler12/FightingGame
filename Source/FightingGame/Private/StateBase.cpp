@@ -15,6 +15,7 @@ void UStateBase::OnExitState_Implementation()
 
 void UStateBase::TickState_Implementation()
 {
+	UE_LOG(LogTemp, Warning, TEXT("Ticking current state!"));
 }
 
 bool UStateBase::CheckTransition_Implementation()

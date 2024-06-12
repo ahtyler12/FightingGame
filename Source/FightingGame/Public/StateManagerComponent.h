@@ -56,14 +56,12 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SwitchStateByKey(FString StateKey);
 
-	UFUNCTION(BlueprintCallable)
-	void SwitchState(UStateBase* newState);
 
 	UFUNCTION(BlueprintCallable)
 	void InitStateManager();
 
 private:
-	bool bCanTickState = false;
+	bool bCanTickState = true;
 	void InitializeStates();
 		
 };

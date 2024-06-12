@@ -18,8 +18,6 @@ UStateManagerComponent::UStateManagerComponent()
 void UStateManagerComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	InitializeStates();
 	
 
 	// ...
@@ -36,9 +34,12 @@ void UStateManagerComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		currentState->TickState();
 	}
 
-	if (bDebug && currentState->IsValidLowLevel())
+	if (bDebug) 		
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, this->GetOwner()->GetName() + "'s current state is: " + currentState->stateDisplayName.GetPlainNameString());
+		if(currentState->IsValidLowLevel())
+		{
+		}
+			
 	}
 }
 
@@ -56,44 +57,35 @@ void UStateManagerComponent::SwitchStateByKey(FString StateKey)
 		if (!currentState)
 		{
 			currentState = NewState;
-			GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, this->GetOwner()->GetName() + "'s State Switch Success!: " + currentState->stateDisplayName.GetPlainNameString());
 		}
 		else
 		{
 			if (currentState->GetClass() == NewState->GetClass() && currentState->bCanRepeate == false)
 			{
 				if (bDebug)
-				{					
-					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, this->GetOwner()->GetName() + "'s State Switch Failed!: " + currentState->stateDisplayName.GetPlainNameString());
+				{			
+					UE_LOG(LogTemp, Warning, TEXT("State is not repeatable!"));
 				}
 
 			}
 			else
 			{
-				//if(NewState->CheckTransition())
-				//{
-				//	
-				//}
-				bCanTickState = false;
-				currentState->OnExitState();
-				if (StateHistory.Num() < stateHistoryLength)
+				/*Will eventually use the check transition function to see if the state can be entered.*/
+				if(NewState->CheckTransition())
 				{
+					bCanTickState = false;
+					currentState->OnExitState();
 					StateHistory.Push(currentState);
+					currentState = NewState;
 				}
-				else
-				{
-					StateHistory.RemoveAt(0);
-					StateHistory.Push(currentState);
-
-				}
-				currentState = NewState;
+		
 			}
 		}
 		if (currentState)
 		{
 			if (bDebug)
 			{
-				GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, this->GetOwner()->GetName() + "'s State Switch Success!: " + currentState->stateDisplayName.GetPlainNameString());
+				UE_LOG(LogTemp, Warning, TEXT("State switch success!"));
 			}
 			/*Initialize Current State*/
 			currentState->OnEnterState(GetOwner());
@@ -104,71 +96,36 @@ void UStateManagerComponent::SwitchStateByKey(FString StateKey)
 	}
 	else
 	{		
-		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, this->GetOwner()->GetName() + "'s State Switch Failed!: " + currentState->stateDisplayName.GetPlainNameString() + " is not valid!");
+		if (currentState->IsValidLowLevelFast())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("State is not valid!"));
+		}
 	}
 }
 
-void UStateManagerComponent::SwitchState(UStateBase* newState)
-{
-	if (newState->IsValidLowLevel())
-	{
-		if (!currentState)
-		{
-			currentState = newState;
-		}
-		else
-		{
-			if (currentState->GetClass() == newState->GetClass() && currentState->bCanRepeate == false)
-			{
-				if (bDebug)
-				{
-					UE_LOG(LogTemp, Warning, TEXT("State Switch Failed!"));
-				}
-			}
-			else
-			{
-				bCanTickState = false;
-				currentState->OnExitState();
-				if (StateHistory.Num() < stateHistoryLength)
-				{
-					StateHistory.Push(currentState);
-				}
-				else
-				{
-					StateHistory.RemoveAt(0);
-					StateHistory.Push(currentState);
 
-				}
-				if (currentState)
-				{
-					currentState = newState;
-					/*Initialize Current State*/
-					currentState->OnEnterState(GetOwner());
-					bCanTickState = true;
-				}
-			}
-		}
-	}
-	else
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, this->GetOwner()->GetName() + "'s State Switch Failed!: " + newState->stateDisplayName.GetPlainNameString() + " is not valid!");
-	}
-}
 
 void UStateManagerComponent::InitStateManager()
 {
 	/*Original to the Tutorial. Sets the State to the Initial State*/
 	SwitchStateByKey(InitialState);
+
 }
 
 void UStateManagerComponent::InitializeStates()
 {
+	/*Create Instances of each state and add them to the state map*/
 	for (auto It = AvailableStates.CreateConstIterator(); It; ++It)
 	{
 		if(It->Value->IsValidLowLevel())
 		{
 			UStateBase* State = NewObject<UStateBase>(this, It->Value);
+			FString Key = It->Key;			
 			StateMap.Add(It->Key, State);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Provided State is invalid!"));
 		}
 		
 	}

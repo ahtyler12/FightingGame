@@ -15,7 +15,7 @@ class FIGHTINGGAME_API UStateBase : public UObject
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bCanTickState;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -36,4 +36,7 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent)
 	void TickState();
+
+	UFUNCTION(BlueprintNativeEvent)
+	bool CheckTransition();
 };

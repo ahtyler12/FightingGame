@@ -18,7 +18,7 @@ AFightingGameCharacter::AFightingGameCharacter()
 {
 
 	StateManager = CreateDefaultSubobject<UStateManagerComponent>(TEXT("State Manager"));
-	//StateManager->InitStateManager();
+
 
 
 
@@ -128,6 +128,10 @@ void AFightingGameCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 			isPlayerOne = false;
 		}
 	}
+}
+void AFightingGameCharacter::BeginPlay()
+{
+	StateManager->InitStateManager();
 }
 void AFightingGameCharacter::Tick(float DeltaTime)
 {
